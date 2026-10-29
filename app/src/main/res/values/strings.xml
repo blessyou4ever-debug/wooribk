@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">우리 경조비 매니저</string>
-    <string name="notification_listener_label">우리WON뱅킹 경조비 알림 감지 서비스</string>
+    <string name="app_name">경조비 가계부</string>
+    <string name="notification_listener_label">경조비 알림 연동 서비스</string>
 </resources>

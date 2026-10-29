@@ -1,4 +1,4 @@
-package com.woori.gyeongjobi.data
+package com.personal.gyeongjobi.data
 
 import android.content.Context
 import androidx.room.Database
@@ -48,7 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "woori_gyeongjobi.db"
+                    "personal_gyeongjobi.db"
                 ).build()
                 INSTANCE = instance
                 instance

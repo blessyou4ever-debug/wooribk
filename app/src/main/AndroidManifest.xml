@@ -2,28 +2,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 경조비 후보 감지 시 사용자에게 확인 알림을 띄우기 위한 권한 -->
+    <!-- 경조비 후보 감지 시 사용자에게 알림을 띄우기 위한 권한 (인터넷 권한 없음 -> 외부 유출 불가 보장) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@android:drawable/ic_dialog_info"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WooriGyeongjobi"
+        android:theme="@style/Theme.Gyeongjobi"
         tools:targetApi="34">
 
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.WooriGyeongjobi">
+            android:theme="@style/Theme.Gyeongjobi">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- 우리WON뱅킹 입출금 알림 수집 서비스 -->
+        <!-- 우리WON뱅킹 출금 알림 감지 서비스 -->
         <service
             android:name=".service.WooriNotificationService"
             android:exported="true"

@@ -1,4 +1,4 @@
-package com.woori.gyeongjobi.data
+package com.personal.gyeongjobi.data
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -11,10 +11,6 @@ data class FilterConfig(
     val customAmounts: Set<Long>,
     val filterByAmountEnabled: Boolean = true
 ) {
-    /**
-     * 기본 프리셋 금액 목록:
-     * 3만, 5만, 7만, 10만, 15만, 20만, 30만, 50만, 100만원
-     */
     companion object {
         val DEFAULT_PRESET_AMOUNTS: List<Long> = listOf(
             30_000L,
@@ -40,7 +36,7 @@ data class FilterConfig(
 
 class FilterPreferences(context: Context) {
     private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences("filter_prefs", Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences("gyeongjobi_filter_prefs", Context.MODE_PRIVATE)
 
     private val _configFlow = MutableStateFlow(loadConfig())
     val configFlow: StateFlow<FilterConfig> = _configFlow.asStateFlow()

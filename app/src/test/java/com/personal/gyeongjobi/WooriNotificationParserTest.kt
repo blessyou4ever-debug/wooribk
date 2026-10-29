@@ -1,8 +1,8 @@
-package com.woori.gyeongjobi
+package com.personal.gyeongjobi
 
-import com.woori.gyeongjobi.data.FilterConfig
-import com.woori.gyeongjobi.parser.ParseOutcome
-import com.woori.gyeongjobi.parser.WooriNotificationParser
+import com.personal.gyeongjobi.data.FilterConfig
+import com.personal.gyeongjobi.parser.ParseOutcome
+import com.personal.gyeongjobi.parser.WooriNotificationParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -51,12 +51,10 @@ class WooriNotificationParserTest {
 
     @Test
     fun `개인 이체라도 경조비 금액 단위가 아니면 제외되고 설정 금액이면 수집된다`() {
-        // 1,400,000원은 기본 필터(3/5/7/10/15/20/30/50/100만)에 없으므로 Ignored
         val raw140 = "[출금] 신한조창헌 1,400,000원 1002-957-741***계좌 잔액 3,519,561원 10/27 05:36:06"
         val outcome140 = WooriNotificationParser.parseNotification("우리WON뱅킹 입출금알림", raw140, defaultFilter, 2026)
         assertTrue(outcome140 is ParseOutcome.Ignored)
 
-        // 100,000원 개인 이체는 Matched + 은행(신한)/이름(조창헌) 분리
         val raw10 = "[출금] 신한조창헌 100,000원 1002-957-741***계좌 잔액 3,519,561원 10/27 05:36:06"
         val outcome10 = WooriNotificationParser.parseNotification("우리WON뱅킹 입출금알림", raw10, defaultFilter, 2026)
         assertTrue(outcome10 is ParseOutcome.Matched)

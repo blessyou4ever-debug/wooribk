@@ -1,4 +1,4 @@
-package com.woori.gyeongjobi.data
+package com.personal.gyeongjobi.data
 
 import androidx.room.Dao
 import androidx.room.Delete

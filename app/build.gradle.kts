@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.woori.gyeongjobi"
+    namespace = "com.personal.gyeongjobi"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.woori.gyeongjobi"
+        applicationId = "com.personal.gyeongjobi"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -21,15 +23,39 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("keystore/release.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = "gyeongjobi2026"
+                keyAlias = "gyeongjobi"
+                keyPassword = "gyeongjobi2026"
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
+            } else {
+                // 로컬 IDE 빌드 시 키스토어가 아직 없으면 debug 서명 사용
+                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // 별도 키스토어 설정 없이도 설치 테스트가 가능하도록 debug signingConfig 연결
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

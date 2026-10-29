@@ -1,20 +1,20 @@
-package com.woori.gyeongjobi.ui
+package com.personal.gyeongjobi.ui
 
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.woori.gyeongjobi.backup.BackupImportManager
-import com.woori.gyeongjobi.data.AppDatabase
-import com.woori.gyeongjobi.data.EventType
-import com.woori.gyeongjobi.data.ExpenseEntity
-import com.woori.gyeongjobi.data.FilterConfig
-import com.woori.gyeongjobi.data.FilterPreferences
-import com.woori.gyeongjobi.data.RecordSource
-import com.woori.gyeongjobi.data.RecordStatus
-import com.woori.gyeongjobi.data.RelationType
-import com.woori.gyeongjobi.parser.ParseOutcome
-import com.woori.gyeongjobi.parser.WooriNotificationParser
+import com.personal.gyeongjobi.backup.BackupImportManager
+import com.personal.gyeongjobi.data.AppDatabase
+import com.personal.gyeongjobi.data.EventType
+import com.personal.gyeongjobi.data.ExpenseEntity
+import com.personal.gyeongjobi.data.FilterConfig
+import com.personal.gyeongjobi.data.FilterPreferences
+import com.personal.gyeongjobi.data.RecordSource
+import com.personal.gyeongjobi.data.RecordStatus
+import com.personal.gyeongjobi.data.RelationType
+import com.personal.gyeongjobi.parser.ParseOutcome
+import com.personal.gyeongjobi.parser.WooriNotificationParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -44,9 +43,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _toastMessage.value = null
     }
 
-    /**
-     * 대기 내역을 경조비로 최종 확정 (은행/이름/경조구분/관계/메모 수정 반영)
-     */
     fun confirmOrUpdateExpense(
         expense: ExpenseEntity,
         bankName: String,
@@ -73,9 +69,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 수동으로 새 경조비 지출 내역 직접 추가
-     */
     fun addManualExpense(
         bankName: String,
         recipientName: String,
@@ -110,9 +103,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 경조비 내역이 아닌 항목 삭제
-     */
     fun deleteExpense(expense: ExpenseEntity) {
         viewModelScope.launch {
             dao.delete(expense)
@@ -127,9 +117,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 금액 필터 설정 제어
-     */
     fun toggleAmountFilter(amount: Long) {
         filterPrefs.toggleAmount(amount)
     }
@@ -147,20 +134,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         filterPrefs.setFilterByAmountEnabled(enabled)
     }
 
-    /**
-     * 스크린샷 예시 및 경조비 알림 파싱 시뮬레이션 테스트
-     */
     fun simulateNotificationBatch() {
         viewModelScope.launch {
             val sampleNotifications = listOf(
-                // 사용자 스크린샷 속 비개인/비경조 알림들 (자동 필터링되어 제외되어야 함)
                 "[출금] 네이버페이충전 10,000원 1002-957-741***계좌 잔액 3,439,561원 10/28 16:59:49",
                 "[출금] 네이버페이충전 70,000원 1002-957-741***계좌 잔액 3,449,561원 10/28 10:02:18",
                 "[출금] 신한조창헌 1,400,000원 1002-957-741***계좌 잔액 3,519,561원 10/27 05:36:06",
                 "[출금] K B카드출금 207,114원 1002-957-741***계좌 잔액 4,919,561원 10/26 18:09:30",
                 "[출금] NHBC카드대금 306,621원 1002-957-741***계좌 잔액 5,126,675원 10/26 17:29:32",
                 "[출금] 현대10-063 9,310원 1002-957-741***계좌 잔액 5,433,296원 10/26 17:28:07",
-                // 실제 경조비 단위 개인 이체 알림 예시 (수집 대상)
                 "[출금] 신한조창헌 100,000원 1002-957-741***계좌 잔액 3,419,561원 10/28 18:10:00",
                 "[출금] 국민김민지 50,000원 1002-957-741***계좌 잔액 3,369,561원 10/28 19:22:15",
                 "[출금] 농협박성훈 200,000원 1002-957-741***계좌 잔액 3,169,561원 10/29 11:05:30",
@@ -180,13 +162,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is ParseOutcome.Ignored -> ignoredCount++
                 }
             }
-            _toastMessage.value = "알림 10건 테스트 완료: 경조비 후보 ${matchedCount}건 수집, 비개인/비대상 ${ignoredCount}건 자동 제외"
+            _toastMessage.value = "알림 10건 테스트 완료: 경조비 후보 ${matchedCount}건 수집, 비개인/비대상 ${ignoredCount}건 제외"
         }
     }
 
-    /**
-     * 단일 알림 문구 직접 파싱 테스트
-     */
     fun testSingleNotificationText(rawText: String) {
         viewModelScope.launch {
             val outcome = WooriNotificationParser.parseNotification(
@@ -210,9 +189,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 파일 내보내기 / 가져오기 (Storage Access Framework 연동)
-     */
     fun writeSampleTemplateToUri(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {

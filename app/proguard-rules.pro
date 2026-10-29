@@ -1,2 +1,1 @@
-# Keep Room entities & DAOs
--keep class com.woori.gyeongjobi.data.** { *; }
+-keep class com.personal.gyeongjobi.data.** { *; }

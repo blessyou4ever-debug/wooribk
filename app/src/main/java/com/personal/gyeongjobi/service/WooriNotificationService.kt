@@ -1,4 +1,4 @@
-package com.woori.gyeongjobi.service
+package com.personal.gyeongjobi.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,12 +10,12 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
-import com.woori.gyeongjobi.data.AppDatabase
-import com.woori.gyeongjobi.data.ExpenseEntity
-import com.woori.gyeongjobi.data.FilterPreferences
-import com.woori.gyeongjobi.parser.ParseOutcome
-import com.woori.gyeongjobi.parser.WooriNotificationParser
-import com.woori.gyeongjobi.ui.MainActivity
+import com.personal.gyeongjobi.data.AppDatabase
+import com.personal.gyeongjobi.data.ExpenseEntity
+import com.personal.gyeongjobi.data.FilterPreferences
+import com.personal.gyeongjobi.parser.ParseOutcome
+import com.personal.gyeongjobi.parser.WooriNotificationParser
+import com.personal.gyeongjobi.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,7 +30,6 @@ class WooriNotificationService : NotificationListenerService() {
         if (sbn == null) return
 
         val packageName = sbn.packageName ?: return
-        // 우리WON뱅킹 패키지 여부 확인
         if (packageName != WooriNotificationParser.WOORI_PACKAGE_NAME) {
             return
         }
@@ -41,7 +40,6 @@ class WooriNotificationService : NotificationListenerService() {
         val normalText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
         val body = if (!bigText.isNullOrBlank()) bigText else normalText.orEmpty()
 
-        // 입출금알림 제목 또는 [출금] 키워드 확인
         if (!title.contains("입출금") && !body.contains("[출금]")) {
             return
         }
@@ -74,7 +72,7 @@ class WooriNotificationService : NotificationListenerService() {
                 "경조비 지출 감지 알림",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "우리WON뱅킹 출금 알림에서 경조비 후보가 감지되었을 때 알려줍니다."
+                description = "출금 알림에서 경조비 후보가 감지되었을 때 알려줍니다."
             }
             manager.createNotificationChannel(channel)
         }

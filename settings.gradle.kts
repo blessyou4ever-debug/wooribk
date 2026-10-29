@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WooriGyeongjobiTracker"
+rootProject.name = "GyeongjobiTracker"
 include(":app")

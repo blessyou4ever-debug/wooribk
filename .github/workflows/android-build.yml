@@ -1,4 +1,4 @@
-name: Android APK Build & Release
+name: Android Release APK Build
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug & Release Signed APK
+    name: Build Signed Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -28,23 +28,36 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Run Unit Tests (Woori Notification Parser & Filter Tests)
-        run: gradle testDebugUnitTest --stacktrace
+      - name: Generate Release Signing Keystore (Play 프로텍트 차단 방지용 전용 서명)
+        run: |
+          mkdir -p app/keystore
+          keytool -genkeypair -v \
+            -keystore app/keystore/release.jks \
+            -alias gyeongjobi \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "gyeongjobi2026" \
+            -keypass "gyeongjobi2026" \
+            -dname "CN=GyeongjobiApp, OU=PersonalUtility, O=PersonalLedger, L=Seoul, ST=Seoul, C=KR"
 
-      - name: Build Debug APK (바로 설치 가능)
-        run: gradle assembleDebug --stacktrace
+      - name: Run Unit Tests
+        run: gradle testReleaseUnitTest --stacktrace
 
-      - name: Upload Debug APK Artifact
+      - name: Build Signed Release APK
+        run: gradle assembleRelease --stacktrace
+
+      - name: Upload Signed Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: woori-gyeongjobi-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: gyeongjobi-release-signed-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - name: Create GitHub Release (태그 푸시 시 자동 릴리즈)
+      - name: Create GitHub Release (태그 푸시 시)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

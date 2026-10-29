@@ -1,4 +1,4 @@
-package com.woori.gyeongjobi.ui
+package com.personal.gyeongjobi.ui
 
 import android.Manifest
 import android.content.ComponentName
@@ -40,13 +40,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.woori.gyeongjobi.data.EventType
-import com.woori.gyeongjobi.data.ExpenseEntity
-import com.woori.gyeongjobi.data.FilterConfig
-import com.woori.gyeongjobi.data.RecordStatus
-import com.woori.gyeongjobi.data.RelationType
-import com.woori.gyeongjobi.parser.WooriNotificationParser
-import com.woori.gyeongjobi.service.WooriNotificationService
+import com.personal.gyeongjobi.data.EventType
+import com.personal.gyeongjobi.data.ExpenseEntity
+import com.personal.gyeongjobi.data.FilterConfig
+import com.personal.gyeongjobi.data.RecordStatus
+import com.personal.gyeongjobi.data.RelationType
+import com.personal.gyeongjobi.parser.WooriNotificationParser
+import com.personal.gyeongjobi.service.WooriNotificationService
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val wooriColorScheme = lightColorScheme(
+            val appColorScheme = lightColorScheme(
                 primary = Color(0xFF0067AC),
                 onPrimary = Color.White,
                 primaryContainer = Color(0xFFD4E9FF),
@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
                 background = Color(0xFFF6F8FB),
                 surface = Color.White
             )
-            MaterialTheme(colorScheme = wooriColorScheme) {
+            MaterialTheme(colorScheme = appColorScheme) {
                 GyeongjobiAppScreen()
             }
         }
@@ -108,7 +108,6 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
     var editingExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
     var showManualAddDialog by remember { mutableStateOf(false) }
 
-    // 알림 접근 권한 활성화 상태 감지
     var hasNotificationAccess by remember {
         mutableStateOf(isNotificationServiceEnabled(context))
     }
@@ -129,7 +128,7 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
                 title = {
                     Column {
                         Text(
-                            text = "우리WON 경조비 매니저",
+                            text = "경조비 가계부",
                             fontWeight = FontWeight.Bold,
                             fontSize = 19.sp
                         )
@@ -290,7 +289,7 @@ fun NotificationPermissionBanner(onOpenSettings: () -> Unit) {
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "우리WON뱅킹 알림 읽기 권한이 필요합니다",
+                    text = "우리WON뱅킹 알림 연동 권한이 필요합니다",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = Color(0xFF4E342E)
@@ -320,7 +319,6 @@ fun PendingTabScreen(
     var showSimulatorSheet by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 상단 안내 및 테스트 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -424,7 +422,7 @@ fun NotificationSimulatorCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "우리WON뱅킹 알림 파싱 테스트기",
+                text = "알림 파싱 테스트기",
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = Color(0xFF004B87)
@@ -446,13 +444,13 @@ fun NotificationSimulatorCard(
                     onClick = { onTestSingleText(sampleInput) },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("위 문구 파싱 테스트", fontSize = 12.sp)
+                    Text("위 문구 테스트", fontSize = 12.sp)
                 }
                 OutlinedButton(
                     onClick = onSimulateBatch,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("스크린샷+샘플 10건 일괄 테스트", fontSize = 12.sp)
+                    Text("샘플 10건 테스트", fontSize = 12.sp)
                 }
             }
         }
@@ -498,7 +496,7 @@ fun PendingExpenseCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "(원본: ${expense.rawDescription})",
+                        text = "(적요: ${expense.rawDescription})",
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
@@ -517,16 +515,6 @@ fun PendingExpenseCard(
                 fontSize = 12.sp,
                 color = Color(0xFF607D8B)
             )
-            if (expense.rawNotificationText.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = expense.rawNotificationText,
-                    fontSize = 11.sp,
-                    color = Color(0xFF90A4AE),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
 
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -540,7 +528,7 @@ fun PendingExpenseCard(
                 ) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("경조비 아님 (삭제)")
+                    Text("경조비 아님")
                 }
                 Button(
                     onClick = onConfirm,
@@ -548,7 +536,7 @@ fun PendingExpenseCard(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("경조비 확정·분류")
+                    Text("경조비 확정")
                 }
             }
         }
@@ -580,7 +568,6 @@ fun ConfirmedLedgerTabScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 검색창
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -599,7 +586,6 @@ fun ConfirmedLedgerTabScreen(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         )
 
-        // 경조 구분 필터 칩
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 12.dp),
@@ -623,7 +609,6 @@ fun ConfirmedLedgerTabScreen(
             }
         }
 
-        // 필터 합계 요약 바
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -947,35 +932,30 @@ fun BackupAndSettingsTabScreen(
     var customManWonInput by remember { mutableStateOf("") }
     val todayCompact = remember { LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) }
 
-    // 1. 샘플 양식 CSV 저장 런처
     val sampleTemplateLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
         if (uri != null) vm.writeSampleTemplateToUri(uri)
     }
 
-    // 2. 과거 내역 CSV 업로드 런처 (전용 양식 & 우리은행 엑셀/CSV 모두 호환)
     val importCsvLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) vm.importPastHistoryCsvFromUri(uri, applyFilterOnBankExport = true)
     }
 
-    // 3. 기기 전체 백업 JSON 저장 런처
     val exportBackupJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) vm.exportFullBackupJsonToUri(uri)
     }
 
-    // 4. 기기 백업 JSON 복원 런처
     val importBackupJsonLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) vm.importBackupJsonFromUri(uri)
     }
 
-    // 5. 전체 장부 엑셀용 CSV 내보내기 런처
     val exportAllCsvLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
@@ -989,7 +969,6 @@ fun BackupAndSettingsTabScreen(
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. 수집 금액 단위 커스터마이징 카드
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -1077,7 +1056,6 @@ fun BackupAndSettingsTabScreen(
             }
         }
 
-        // 2. 과거 내역 업로드 & 양식 제공 카드
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -1111,7 +1089,6 @@ fun BackupAndSettingsTabScreen(
             }
         }
 
-        // 3. 내 기기 백업 및 불러오기 카드
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -1154,7 +1131,6 @@ fun BackupAndSettingsTabScreen(
             }
         }
 
-        // 4. 알림 권한 상태 카드
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -1167,9 +1143,9 @@ fun BackupAndSettingsTabScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("우리WON뱅킹 알림 연동 상태", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("알림 연동 상태", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
-                        text = if (hasNotificationAccess) "정상 작동 중 (알림 접근 허용됨)" else "권한 미허용 (알림 접근 권한 필요)",
+                        text = if (hasNotificationAccess) "정상 작동 중 (알림 연동 허용됨)" else "권한 미허용 (알림 연동 필요)",
                         fontSize = 12.sp,
                         color = if (hasNotificationAccess) Color(0xFF2E7D32) else Color(0xFFC62828)
                     )
@@ -1280,7 +1256,7 @@ fun ConfirmOrEditExpenseDialog(
                 OutlinedTextField(
                     value = memo,
                     onValueChange = { memo = it },
-                    label = { Text("메모 (예: 대학 동기 결혼식, 외삼촌 조의금)") },
+                    label = { Text("메모") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

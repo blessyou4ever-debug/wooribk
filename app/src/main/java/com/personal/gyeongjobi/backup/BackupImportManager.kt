@@ -1,15 +1,15 @@
-package com.woori.gyeongjobi.backup
+package com.personal.gyeongjobi.backup
 
 import android.content.Context
 import android.net.Uri
-import com.woori.gyeongjobi.data.EventType
-import com.woori.gyeongjobi.data.ExpenseEntity
-import com.woori.gyeongjobi.data.FilterConfig
-import com.woori.gyeongjobi.data.RecordSource
-import com.woori.gyeongjobi.data.RecordStatus
-import com.woori.gyeongjobi.data.RelationType
-import com.woori.gyeongjobi.parser.ParseOutcome
-import com.woori.gyeongjobi.parser.WooriNotificationParser
+import com.personal.gyeongjobi.data.EventType
+import com.personal.gyeongjobi.data.ExpenseEntity
+import com.personal.gyeongjobi.data.FilterConfig
+import com.personal.gyeongjobi.data.RecordSource
+import com.personal.gyeongjobi.data.RecordStatus
+import com.personal.gyeongjobi.data.RelationType
+import com.personal.gyeongjobi.parser.ParseOutcome
+import com.personal.gyeongjobi.parser.WooriNotificationParser
 import org.json.JSONArray
 import org.json.JSONObject
 import java.nio.charset.Charset
@@ -21,9 +21,6 @@ data class ImportSummary(
     val message: String
 )
 
-/**
- * 향후 구글 드라이브 등 클라우드 백업 확장을 위한 인터페이스
- */
 interface CloudBackupProvider {
     val providerName: String
     suspend fun uploadBackupJson(jsonPayload: String): Result<String>
@@ -34,9 +31,6 @@ object BackupImportManager {
 
     private const val UTF8_BOM = "\uFEFF"
 
-    /**
-     * 1. 과거 내역 업로드용 표준 CSV 양식 샘플 생성 (엑셀 한글 깨짐 방지 UTF-8 BOM 포함)
-     */
     fun buildSampleTemplateCsv(): String {
         val sb = StringBuilder()
         sb.append(UTF8_BOM)
@@ -48,9 +42,6 @@ object BackupImportManager {
         return sb.toString()
     }
 
-    /**
-     * 2. 현재 저장된 경조비 내역 전체를 엑셀 호환 CSV로 내보내기
-     */
     fun exportExpensesToCsv(expenses: List<ExpenseEntity>): String {
         val sb = StringBuilder()
         sb.append(UTF8_BOM)
@@ -75,9 +66,6 @@ object BackupImportManager {
         return sb.toString()
     }
 
-    /**
-     * 3. 기기 전체 백업용 JSON 생성 (내역 + 금액 필터 설정 포함)
-     */
     fun exportFullBackupJson(expenses: List<ExpenseEntity>, filterConfig: FilterConfig): String {
         val root = JSONObject()
         root.put("backupVersion", 1)
@@ -115,9 +103,6 @@ object BackupImportManager {
         return root.toString(2)
     }
 
-    /**
-     * 4. JSON 백업 파일 파싱 및 복원 데이터 추출
-     */
     fun parseFullBackupJson(jsonText: String): Pair<List<ExpenseEntity>, FilterConfig?> {
         val cleaned = jsonText.removePrefix(UTF8_BOM).trim()
         val root = JSONObject(cleaned)
@@ -181,12 +166,6 @@ object BackupImportManager {
         return list to restoredFilter
     }
 
-    /**
-     * 5. 과거 내역 CSV 업로드 통합 파서
-     * - 지원 형식 A: 앱 전용 CSV 양식 (`일자,시간,은행,이름,금액,경조구분,관계,메모,상태`)
-     * - 지원 형식 B: 우리은행 거래내역 엑셀/CSV 내보내기 파일 (`거래일시/거래일자`, `적요/기재내용/받는분`, `출금금액/찾으신금액` 등 자동 인식 + 개인/금액 필터 적용)
-     * - 지원 형식 C: 우리WON뱅킹 알림 텍스트 묶음
-     */
     fun parseUploadedHistoryText(
         rawContent: String,
         filterConfig: FilterConfig,
@@ -199,7 +178,6 @@ object BackupImportManager {
 
         if (lines.isEmpty()) return emptyList()
 
-        // A. 알림 원문 텍스트 파일인 경우
         if (lines.any { it.contains("[출금]") && it.contains("계좌") }) {
             return lines.mapNotNull { line ->
                 when (val res = WooriNotificationParser.parseNotification(null, line, filterConfig)) {
@@ -209,7 +187,6 @@ object BackupImportManager {
             }
         }
 
-        // 헤더 라인 탐색 (우리은행 CSV 내보내기는 상단에 계좌 요약 줄이 있을 수 있음)
         var headerIndex = 0
         for (i in lines.indices) {
             val l = lines[i]
@@ -263,7 +240,6 @@ object BackupImportManager {
             val amount = rawAmount.toLongOrNull() ?: continue
             if (amount <= 0L) continue
 
-            // 만약 은행란이 비어 있고 이름란에 "신한조창헌"처럼 합쳐져 있다면 자동 분리
             val separated = if (rawBank.isBlank()) {
                 WooriNotificationParser.extractBankAndPersonalName(rawName)
             } else null
@@ -305,10 +281,6 @@ object BackupImportManager {
         return results
     }
 
-    /**
-     * 우리은행 엑셀/CSV 거래내역 파일 파싱
-     * 일반 컬럼 구성 예: [거래일시, 적요, 기재내용(또는 받는분/의뢰인), 찾으신금액(출금), 맡기신금액(입금), 거래후잔액, 취급점]
-     */
     private fun parseWooriBankExportRows(
         rows: List<String>,
         headerCols: List<String>,
@@ -318,7 +290,6 @@ object BackupImportManager {
         val dateTimeIdx = headerCols.indexOfFirst { it.contains("거래일시") || it.contains("거래일자") || it.contains("일자") || it.contains("날짜") }
             .takeIf { it >= 0 } ?: 0
 
-        // 받는분/기재내용/적요 후보 컬럼들
         val descIndices = headerCols.mapIndexedNotNull { idx, name ->
             if (name.contains("기재내용") || name.contains("받는분") || name.contains("의뢰인") || name.contains("적요") || name.contains("내용")) idx else null
         }.ifEmpty { listOf(1, 2) }
@@ -345,7 +316,6 @@ object BackupImportManager {
                 continue
             }
 
-            // 기재내용/적요 컬럼들 중 개인 이름(은행+이름)으로 판별되는 항목 탐색
             val matchedPerson = descIndices.firstNotNullOfOrNull { idx ->
                 val cell = cols.getOrNull(idx).orEmpty().trim()
                 WooriNotificationParser.extractBankAndPersonalName(cell)
@@ -377,15 +347,11 @@ object BackupImportManager {
         return results
     }
 
-    /**
-     * URI에서 텍스트를 읽을 때 UTF-8 및 한글 엑셀(EUC-KR / CP949) 인코딩 자동 감지
-     */
     fun readTextFromUri(context: Context, uri: Uri): String {
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             ?: return ""
         if (bytes.isEmpty()) return ""
 
-        // UTF-8 BOM 확인
         if (bytes.size >= 3 &&
             bytes[0] == 0xEF.toByte() &&
             bytes[1] == 0xBB.toByte() &&
@@ -395,7 +361,6 @@ object BackupImportManager {
         }
 
         val utf8Text = String(bytes, Charsets.UTF_8)
-        // UTF-8 디코딩 시 깨진 문자(\uFFFD)가 없으면 UTF-8 사용, 있으면 CP949(EUC-KR)로 디코딩
         return if (!utf8Text.contains('\uFFFD')) {
             utf8Text
         } else {
@@ -461,8 +426,8 @@ object BackupImportManager {
     }
 
     private fun escapeCsv(value: String): String {
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"${value.replace("\"", "\"\"")}\""
+        if (value.contains(",") || value.contains(""") || value.contains("\n")) {
+            return ""${value.replace(""", """")}""
         }
         return value
     }
