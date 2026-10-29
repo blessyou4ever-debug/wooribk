@@ -1,5 +1,3 @@
-import java.io.File
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -25,23 +23,10 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = file("keystore/release.jks")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = "gyeongjobi2026"
-                keyAlias = "gyeongjobi"
-                keyPassword = "gyeongjobi2026"
-                enableV1Signing = true
-                enableV2Signing = true
-                enableV3Signing = true
-                enableV4Signing = true
-            } else {
-                // 로컬 IDE 빌드 시 키스토어가 아직 없으면 debug 서명 사용
-                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
+            storeFile = file("keystore/release.jks")
+            storePassword = "gyeongjobi2026"
+            keyAlias = "gyeongjobi"
+            keyPassword = "gyeongjobi2026"
         }
     }
 

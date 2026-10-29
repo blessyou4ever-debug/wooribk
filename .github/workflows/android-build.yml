@@ -1,16 +1,13 @@
-name: Android Release APK Build
+name: Android Release Build
 
 on:
   push:
-    branches: [ "main", "master" ]
-    tags: [ "v*" ]
-  pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Signed Release APK
+    name: Build Signed APK
     runs-on: ubuntu-latest
 
     steps:
@@ -28,36 +25,12 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Generate Release Signing Keystore (Play 프로텍트 차단 방지용 전용 서명)
-        run: |
-          mkdir -p app/keystore
-          keytool -genkeypair -v \
-            -keystore app/keystore/release.jks \
-            -alias gyeongjobi \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass "gyeongjobi2026" \
-            -keypass "gyeongjobi2026" \
-            -dname "CN=GyeongjobiApp, OU=PersonalUtility, O=PersonalLedger, L=Seoul, ST=Seoul, C=KR"
-
-      - name: Run Unit Tests
-        run: gradle testReleaseUnitTest --stacktrace
-
       - name: Build Signed Release APK
         run: gradle assembleRelease --stacktrace
 
-      - name: Upload Signed Release APK Artifact
+      - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gyeongjobi-release-signed-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          name: gyeongjobi-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
-
-      - name: Create GitHub Release (태그 푸시 시)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: app/build/outputs/apk/release/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
