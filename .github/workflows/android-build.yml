@@ -20,15 +20,31 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle 8.7
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: Build Signed Release APK
-        run: gradle assembleRelease --stacktrace
+      - name: Prepare Keystore & Environment
+        run: |
+          mkdir -p app/keystore
+          if [ ! -f app/keystore/release.jks ]; then
+            keytool -genkeypair -v \
+              -keystore app/keystore/release.jks \
+              -alias gyeongjobi \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "gyeongjobi2026" \
+              -keypass "gyeongjobi2026" \
+              -dname "CN=GyeongjobiApp, OU=PersonalUtility, O=PersonalLedger, L=Seoul, ST=Seoul, C=KR"
+          fi
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      - name: Upload Signed APK Artifact
+      - name: Build Signed Release APK
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Signed Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gyeongjobi-release-apk
