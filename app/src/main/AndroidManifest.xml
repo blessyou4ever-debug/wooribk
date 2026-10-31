@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/ic_dialog_info"
@@ -18,7 +20,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 공유하기(Share)로 우리WON뱅킹 알림/내역 텍스트 즉시 수신 -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -26,7 +27,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Play 스토어 자동화 앱(MacroDroid 등) 연동용 브로드캐스트 수신기 -->
+        <service
+            android:name=".service.WooriNotificationService"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".service.NotificationRelayReceiver"
             android:exported="true">
