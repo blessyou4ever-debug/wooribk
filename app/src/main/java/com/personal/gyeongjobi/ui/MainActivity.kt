@@ -1,9 +1,11 @@
 package com.personal.gyeongjobi.ui
 
 import android.Manifest
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -51,12 +53,17 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
+
+    private var sharedTextState = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
         }
+
+        handleIncomingShareIntent(intent)
 
         setContent {
             val appColorScheme = lightColorScheme(
@@ -69,7 +76,24 @@ class MainActivity : ComponentActivity() {
                 surface = Color.White
             )
             MaterialTheme(colorScheme = appColorScheme) {
-                GyeongjobiAppScreen()
+                GyeongjobiAppScreen(
+                    incomingSharedText = sharedTextState.value,
+                    onConsumeSharedText = { sharedTextState.value = null }
+                )
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncomingShareIntent(intent)
+    }
+
+    private fun handleIncomingShareIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!text.isNullOrBlank()) {
+                sharedTextState.value = text
             }
         }
     }
@@ -84,11 +108,22 @@ enum class MainTab(val title: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
+fun GyeongjobiAppScreen(
+    vm: MainViewModel = viewModel(),
+    incomingSharedText: String? = null,
+    onConsumeSharedText: () -> Unit = {}
+) {
     val context = LocalContext.current
     val allExpenses by vm.allExpenses.collectAsStateWithLifecycle()
     val filterConfig by vm.filterConfig.collectAsStateWithLifecycle()
     val toastMsg by vm.toastMessage.collectAsStateWithLifecycle()
+
+    LaunchedEffect(incomingSharedText) {
+        if (!incomingSharedText.isNullOrBlank()) {
+            vm.testSingleNotificationText(incomingSharedText)
+            onConsumeSharedText()
+        }
+    }
 
     LaunchedEffect(toastMsg) {
         toastMsg?.let {
@@ -107,15 +142,23 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
     var currentTab by remember { mutableStateOf(MainTab.PENDING) }
     var editingExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
     var showManualAddDialog by remember { mutableStateOf(false) }
+    var detectedClipboardText by remember { mutableStateOf<String?>(null) }
 
+    val listenerDeclared = remember { isNotificationServiceDeclaredInManifest(context) }
     var hasNotificationAccess by remember {
         mutableStateOf(isNotificationServiceEnabled(context))
     }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasNotificationAccess = isNotificationServiceEnabled(context)
+                // 클립보드에 '[출금]' 텍스트가 복사되어 있으면 자동 감지
+                val clip = readWithdrawalTextFromClipboard(context)
+                if (clip != null && allExpenses.none { it.rawNotificationText == clip.replace(Regex("\\s+"), " ").trim() }) {
+                    detectedClipboardText = clip
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -191,11 +234,22 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (!hasNotificationAccess) {
+            if (listenerDeclared && !hasNotificationAccess) {
                 NotificationPermissionBanner(
                     onOpenSettings = {
                         context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     }
+                )
+            }
+
+            if (detectedClipboardText != null) {
+                ClipboardDetectedBanner(
+                    clipText = detectedClipboardText!!,
+                    onImport = {
+                        vm.testSingleNotificationText(detectedClipboardText!!)
+                        detectedClipboardText = null
+                    },
+                    onDismiss = { detectedClipboardText = null }
                 )
             }
 
@@ -223,6 +277,7 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
                 MainTab.SETTINGS -> BackupAndSettingsTabScreen(
                     vm = vm,
                     filterConfig = filterConfig,
+                    listenerDeclared = listenerDeclared,
                     hasNotificationAccess = hasNotificationAccess,
                     onOpenNotificationSettings = {
                         context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -264,6 +319,52 @@ fun GyeongjobiAppScreen(vm: MainViewModel = viewModel()) {
                 showManualAddDialog = false
             }
         )
+    }
+}
+
+@Composable
+fun ClipboardDetectedBanner(
+    clipText: String,
+    onImport: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "📋 복사된 우리WON뱅킹 출금 문구 감지됨",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = Color(0xFF1B5E20)
+                )
+                TextButton(onClick = onDismiss) {
+                    Text("닫기", fontSize = 11.sp)
+                }
+            }
+            Text(
+                text = clipText,
+                fontSize = 11.sp,
+                color = Color(0xFF2E7D32),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Button(
+                onClick = onImport,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("이 출금 내역 바로 분석하여 추가하기", fontSize = 12.sp)
+            }
+        }
     }
 }
 
@@ -336,7 +437,7 @@ fun PendingTabScreen(
                     onClick = { showSimulatorSheet = !showSimulatorSheet },
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text(if (showSimulatorSheet) "테스트 닫기" else "알림 테스트", fontSize = 12.sp)
+                    Text(if (showSimulatorSheet) "입력창 닫기" else "알림 문구 붙여넣기/테스트", fontSize = 12.sp)
                 }
                 if (pendingList.isNotEmpty()) {
                     TextButton(onClick = onClearAllPending) {
@@ -376,7 +477,7 @@ fun PendingTabScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "우리WON뱅킹에서 설정 금액(5만/10만/20만원 등)이 개인에게 출금되면 이곳에 자동으로 표시됩니다.",
+                        text = "우리WON뱅킹에서 설정 금액(5만/10만/20만원 등)이 개인에게 출금되면 이곳에 표시됩니다. 알림 문구를 복사해 붙여넣거나 공유하기로 보내도 자동 분석됩니다.",
                         fontSize = 13.sp,
                         color = Color(0xFF78909C)
                     )
@@ -422,7 +523,7 @@ fun NotificationSimulatorCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "알림 파싱 테스트기",
+                text = "우리WON뱅킹 알림 문구 직접 등록 / 테스트",
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = Color(0xFF004B87)
@@ -431,7 +532,7 @@ fun NotificationSimulatorCard(
             OutlinedTextField(
                 value = sampleInput,
                 onValueChange = { sampleInput = it },
-                label = { Text("알림 원문 입력") },
+                label = { Text("알림 원문 붙여넣기") },
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
             )
@@ -444,7 +545,7 @@ fun NotificationSimulatorCard(
                     onClick = { onTestSingleText(sampleInput) },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("위 문구 테스트", fontSize = 12.sp)
+                    Text("위 문구 파싱·등록", fontSize = 12.sp)
                 }
                 OutlinedButton(
                     onClick = onSimulateBatch,
@@ -926,6 +1027,7 @@ fun StatisticsTabScreen(confirmedList: List<ExpenseEntity>) {
 fun BackupAndSettingsTabScreen(
     vm: MainViewModel,
     filterConfig: FilterConfig,
+    listenerDeclared: Boolean,
     hasNotificationAccess: Boolean,
     onOpenNotificationSettings: () -> Unit
 ) {
@@ -1131,27 +1233,47 @@ fun BackupAndSettingsTabScreen(
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        if (listenerDeclared) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("알림 연동 상태", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(
-                        text = if (hasNotificationAccess) "정상 작동 중 (알림 연동 허용됨)" else "권한 미허용 (알림 연동 필요)",
-                        fontSize = 12.sp,
-                        color = if (hasNotificationAccess) Color(0xFF2E7D32) else Color(0xFFC62828)
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("알림 연동 상태", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            text = if (hasNotificationAccess) "정상 작동 중 (알림 연동 허용됨)" else "권한 미허용 (알림 연동 필요)",
+                            fontSize = 12.sp,
+                            color = if (hasNotificationAccess) Color(0xFF2E7D32) else Color(0xFFC62828)
+                        )
+                    }
+                    OutlinedButton(onClick = onOpenNotificationSettings) {
+                        Text("권한 설정 열기")
+                    }
                 }
-                OutlinedButton(onClick = onOpenNotificationSettings) {
-                    Text("권한 설정 열기")
+            }
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text("Play 프로텍트 통과 모드 작동 중", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF1B5E20))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "현재 설치된 버전은 Play 프로텍트의 민감권한 하드차단을 방지한 안전 버전입니다.\n" +
+                        "1) 우리WON뱅킹 알림 문구를 복사한 뒤 앱을 열면 자동 감지됩니다.\n" +
+                        "2) 텍스트를 '공유하기 → 경조비 가계부'로 보내면 즉시 등록됩니다.\n" +
+                        "3) MacroDroid 등 자동화 앱에서 'com.personal.gyeongjobi.ACTION_NOTIFICATION_RELAY' 브로드캐스트로 전달하면 백그라운드 자동 수집됩니다.",
+                        fontSize = 12.sp,
+                        color = Color(0xFF455A64)
+                    )
                 }
             }
         }
@@ -1404,8 +1526,24 @@ fun ManualAddExpenseDialog(
     )
 }
 
+fun isNotificationServiceDeclaredInManifest(context: Context): Boolean {
+    return runCatching {
+        val cn = ComponentName(context, WooriNotificationService::class.java)
+        context.packageManager.getServiceInfo(cn, PackageManager.MATCH_ALL)
+        true
+    }.getOrDefault(false)
+}
+
 fun isNotificationServiceEnabled(context: Context): Boolean {
     val cn = ComponentName(context, WooriNotificationService::class.java)
     val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
     return flat != null && flat.contains(cn.flattenToString())
+}
+
+fun readWithdrawalTextFromClipboard(context: Context): String? {
+    return runCatching {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val text = clipboard?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.trim()
+        if (!text.isNullOrBlank() && text.contains("[출금]")) text else null
+    }.getOrNull()
 }
