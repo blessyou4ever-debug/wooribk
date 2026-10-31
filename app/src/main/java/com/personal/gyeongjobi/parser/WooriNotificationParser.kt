@@ -43,14 +43,14 @@ object WooriNotificationParser {
     )
 
     private val FALLBACK_WITHDRAWAL_REGEX = Regex(
-        pattern = """\[출금\]\s*(.+?)\s+([0-9,]+)원.*?(?:(\d{2}/\d{2})\s+(\d{2}:\d{2}(?::\d{2})?))?""",
+        pattern = """\[출금\]\s*(.+?)\s+([0-9,]+)원.*?(?:(\d{2}/\d{2})\s+(\\d{2}:\\d{2}(?::\\d{2})?))?""".replace("\\\\d", "\\d"),
         options = setOf(RegexOption.DOT_MATCHES_ALL)
     )
 
     private val PURE_KOREAN_NAME_REGEX = Regex("^[가-힣]{2,4}$")
 
     fun extractBankAndPersonalName(rawDescription: String): BankAndRecipient? {
-        val normalized = rawDescription.replace("\s+".toRegex(), " ").trim()
+        val normalized = rawDescription.replace("\\s+".toRegex(), " ").trim()
         if (normalized.isEmpty()) return null
 
         val compact = normalized.replace(" ", "")
@@ -120,7 +120,7 @@ object WooriNotificationParser {
             return ParseOutcome.Ignored("출금 내역이 아닙니다 ([출금] 태그 없음).")
         }
 
-        val singleLine = rawText.replace(Regex("\s+"), " ").trim()
+        val singleLine = rawText.replace(Regex("\\s+"), " ").trim()
 
         val match = NOTIFICATION_REGEX.find(singleLine)
         if (match != null) {

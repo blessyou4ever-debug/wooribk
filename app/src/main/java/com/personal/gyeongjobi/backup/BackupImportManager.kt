@@ -426,8 +426,9 @@ object BackupImportManager {
     }
 
     private fun escapeCsv(value: String): String {
-        if (value.contains(",") || value.contains(""") || value.contains("\n")) {
-            return ""${value.replace(""", """")}""
+        val quote = "\""
+        if (value.contains(",") || value.contains(quote) || value.contains("\n")) {
+            return quote + value.replace(quote, quote + quote) + quote
         }
         return value
     }
